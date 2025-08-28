@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -83,11 +84,15 @@ WSGI_APPLICATION = 'miniproject.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': 'attendease_db',
+                'USER': 'root',
+                'PASSWORD': 'password',
+                'HOST': 'localhost',  # Or your MySQL server's IP address
+                'PORT': '3306',      # Default MySQL port
+            }
+        }
 
 
 # Password validation
