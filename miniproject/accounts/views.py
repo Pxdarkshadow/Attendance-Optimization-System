@@ -1,3 +1,6 @@
+import pprint
+from datetime import datetime
+from . import forms
 from django.core.mail import EmailMessage
 from . tokens import generate_token
 from miniproject import settings
@@ -11,6 +14,10 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_decode,urlsafe_base64_encode
 from django.utils.encoding import force_bytes,force_str
+from django.contrib.auth.decorators import login_required
+from .models import Timetable, AcademicCalendar
+import csv
+
 
 # Create your views here.
 def home(request):
@@ -18,6 +25,7 @@ def home(request):
 
 def signup(request):
     if request.method == "POST":
+        pprint.pprint(vars(request)) # For my understanding
         username = request.POST.get('username')
         fname = request.POST['fname']
         lname = request.POST.get('lname')
@@ -48,7 +56,7 @@ def signup(request):
         myuser = User.objects.create_user(username, email, pass1)
         myuser.first_name = fname
         myuser.last_name = lname
-        myuser.is_active = False
+        myuser.is_active = True
 
         myuser.save()
 
@@ -92,16 +100,22 @@ def signin(request):
     if request.method == 'POST':
         username = request.POST.get('username')
         pass1 = request.POST.get('pass1')
+        print("Username:", username)
+        print("Password:", pass1)
 
-        user = authenticate(username=username, password=pass1)
+        user = authenticate(request, username=username, password=pass1)
+        print("User object:", user)
+
+        form = forms.InputTimeTable()
 
         if user is not None:
             login(request, user)
-            fname = user.first_name
-            return render(request, "accounts/index.html",{'fname': fname})
-
-
+            return render(request, "accounts/dashboard.html", {'fname': user.first_name, 'form':form})
+        else:
+            return HttpResponse("Invalid credentials")
+    
     return render(request, 'accounts/signin.html')
+
 
 def signout(request):
     logout(request)
@@ -122,3 +136,70 @@ def activate(request, uidb64, token):
         return redirect('home')
     else:
         return render(request, 'activation_failed.html')
+    
+# def user_input(request):
+#     if request.method == 'POST':
+#         pass
+#     return render(request, 'accounts/dashboard.html')
+
+@login_required  # ensures only signed-in users can access
+def upload_timetable(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        csv_file = request.FILES["file"]
+
+        # Check if it’s a CSV
+        if not csv_file.name.endswith('.csv'):
+            return render(request, "accounts/dashboard.html", {"error": "Please upload a CSV file"})
+
+        # Read CSV file
+        file_data = csv_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(file_data)
+
+        # Loop through rows and create Timetable entries
+        for row in reader:
+            Timetable.objects.create(
+                user=request.user,          # link to logged-in user
+                time=row['Time'],           # ensure CSV has column 'time'
+                monday=row.get('Monday', ''),
+                tuesday=row.get('Tuesday', ''),
+                wednesday=row.get('Wednesday', ''),
+                thursday=row.get('Thursday', ''),
+                friday=row.get('Friday', '')
+            )
+
+        messages.success(request,"Successfully entered the timetable in the database. Upload Academic Calendar!")
+
+        return render(request, "accounts/dashboard.html", {'form':forms.InputAcdCalendar}) 
+    return render(request, "accounts/dashboard.html")
+
+@login_required 
+def upload_acdcalendar(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        csv_file = request.FILES["file"]
+
+        # Check if it’s a CSV
+        if not csv_file.name.endswith('.csv'):
+            return render(request, "accounts/dashboard2.html", {"error": "Please upload a CSV file"})
+        
+        file_data = csv_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(file_data)
+
+
+        for row in reader:
+            date_str = row.get('Date', '')
+            # Convert '30-08-2025' to a Python date object
+            date_obj = datetime.strptime(date_str, '%d-%m-%Y').date() if date_str else None
+            AcademicCalendar.objects.create(
+                user=request.user,
+                date=date_obj,
+                context=row.get('Reason', '')
+            )
+
+        messages.success(request,"Successfully entered Academic Calendar in the database.")
+
+        return redirect('insights')
+
+    return render(request, "accounts/dashboard2.html")
+
+def userprofile(request):
+    return render(request,"accounts/userprofile.html")
