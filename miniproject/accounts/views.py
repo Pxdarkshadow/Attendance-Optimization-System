@@ -15,7 +15,7 @@ from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_decode,urlsafe_base64_encode
 from django.utils.encoding import force_bytes,force_str
 from django.contrib.auth.decorators import login_required
-from .models import Timetable, AcademicCalendar
+from .models import Subject, TimeTable, AcademicCalendar
 import csv
 
 
@@ -106,11 +106,12 @@ def signin(request):
         user = authenticate(request, username=username, password=pass1)
         print("User object:", user)
 
-        form = forms.InputTimeTable()
+        # form = forms.InputTimeTable()
 
         if user is not None:
             login(request, user)
-            return render(request, "accounts/dashboard.html", {'fname': user.first_name, 'form':form})
+            # return render(request, "accounts/dashboard.html", {'fname': user.first_name, 'form':form})
+            return render(request, "accounts/homepage.html", {'fname': user.first_name})
         else:
             return HttpResponse("Invalid credentials")
     
@@ -142,35 +143,7 @@ def activate(request, uidb64, token):
 #         pass
 #     return render(request, 'accounts/dashboard.html')
 
-@login_required  # ensures only signed-in users can access
-def upload_timetable(request):
-    if request.method == "POST" and request.FILES.get("file"):
-        csv_file = request.FILES["file"]
 
-        # Check if it’s a CSV
-        if not csv_file.name.endswith('.csv'):
-            return render(request, "accounts/dashboard.html", {"error": "Please upload a CSV file"})
-
-        # Read CSV file
-        file_data = csv_file.read().decode("utf-8").splitlines()
-        reader = csv.DictReader(file_data)
-
-        # Loop through rows and create Timetable entries
-        for row in reader:
-            Timetable.objects.create(
-                user=request.user,          # link to logged-in user
-                time=row['Time'],           # ensure CSV has column 'time'
-                monday=row.get('Monday', ''),
-                tuesday=row.get('Tuesday', ''),
-                wednesday=row.get('Wednesday', ''),
-                thursday=row.get('Thursday', ''),
-                friday=row.get('Friday', '')
-            )
-
-        messages.success(request,"Successfully entered the timetable in the database. Upload Academic Calendar!")
-
-        return render(request, "accounts/dashboard.html", {'form':forms.InputAcdCalendar}) 
-    return render(request, "accounts/dashboard.html")
 
 @login_required 
 def upload_acdcalendar(request):
@@ -186,13 +159,13 @@ def upload_acdcalendar(request):
 
 
         for row in reader:
-            date_str = row.get('Date', '')
+            date_str = row.get('date', '')
             # Convert '30-08-2025' to a Python date object
             date_obj = datetime.strptime(date_str, '%d-%m-%Y').date() if date_str else None
             AcademicCalendar.objects.create(
                 user=request.user,
                 date=date_obj,
-                context=row.get('Reason', '')
+                context=row.get('context', '')
             )
 
         messages.success(request,"Successfully entered Academic Calendar in the database.")
@@ -203,3 +176,98 @@ def upload_acdcalendar(request):
 
 def userprofile(request):
     return render(request,"accounts/userprofile.html")
+
+# Test
+@login_required 
+def homepage(request):
+    return render(request,"accounts/homepage.html")
+
+@login_required 
+def userinput(request):
+    if request.method == "POST":
+        if request.POST.get('totalSubjects') is not None:
+            # Step 1: show form for subjects
+            return render(request, "accounts/db1.html", {
+                'totalSubjects': range(1, int(request.POST.get('totalSubjects')) + 1)
+            })
+        else:
+            total_subjects = len([k for k in request.POST.keys() if k.startswith("subject") and not k.endswith("Faculty")])
+
+            for index in range(1, total_subjects + 1):
+                subject_name = request.POST.get(f"subject{index}")
+                faculty_name = request.POST.get(f"subject{index}Faculty")
+
+                if subject_name and faculty_name:
+                    Subject.objects.create(
+                        subjectName=subject_name,
+                        facultyName=faculty_name,
+                        user=request.user
+                    )
+
+            return render(request, "accounts/db2.html")
+
+    return render(request, "accounts/db1.html", {'totalSubjects': None})
+
+@login_required  # ensures only signed-in users can access
+def upload_timetable(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        csv_file = request.FILES["file"]
+
+        # Check if it’s a CSV
+        if not csv_file.name.endswith('.csv'):
+            return render(request, "accounts/db2.html")
+
+        # Read CSV file
+        file_data = csv_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(file_data)
+
+        # Loop through rows and create Timetable entries
+        for row in reader:
+
+            subject_name = row['Subject']  # string from CSV
+            subject_instance = Subject.objects.get(subjectName=subject_name)
+            TimeTable.objects.create(
+                user=request.user, # link to logged-in user
+                day=row['Day'],
+                startTime=row['StartTime'],
+                endTime=row['EndTime'],
+                subject=subject_instance 
+                        
+                # time=row['Time'],           # ensure CSV has column 'time'
+                # monday=row.get('Monday', ''),
+                # tuesday=row.get('Tuesday', ''),
+                # wednesday=row.get('Wednesday', ''),
+                # thursday=row.get('Thursday', ''),
+                # friday=row.get('Friday', '')
+            )
+
+        messages.success(request,"Successfully entered the timetable in the database. Upload Academic Calendar!")
+
+        return render(request, "accounts/db3.html") 
+    return render(request, "accounts/db2.html")
+
+
+@login_required  # ensures only signed-in users can access
+def upload_academiccalendar(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        csv_file = request.FILES["file"]
+
+        # Check if it’s a CSV
+        if not csv_file.name.endswith('.csv'):
+            return render(request, "accounts/db3.html")
+
+        # Read CSV file
+        file_data = csv_file.read().decode("utf-8").splitlines()
+        reader = csv.DictReader(file_data)
+
+        # Loop through rows and create Timetable entries
+        for row in reader:
+            AcademicCalendar.objects.create(
+                user=request.user, # link to logged-in user
+                date=row['date'],
+                context=row['context'])
+
+        messages.success(request,"Successfully entered the Academic Calendar in the database!")
+
+        return render(request, "accounts/db3.html") 
+    return render(request, "accounts/db3.html")

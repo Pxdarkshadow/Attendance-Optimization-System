@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>db2</title>
 </head>
 <body>
-    <p>Dashboard</p>
     {% for message in messages %}
     <div class="alert alert-{{message.tags}} alert-dismissable fade show" role="alert">
         <strong>Message:</strong>{{message}}
@@ -15,16 +14,12 @@
         </button>
     </div>
     {% endfor %}
-    <p>Welcome {{ fname }}</p>
-    <form method="post" enctype="multipart/form-data" action="/dashboard">
-    {% csrf_token %}
-    <label>Select CSV file:</label>
-    <input type="file" name="file" accept=".csv" required>
-    <button type="submit">Upload</button>
+    <h1>Enter timetable</h1>
+    <form method="post" enctype="multipart/form-data" action="/db2">
+        {% csrf_token %}
+        <label>Select CSV file:</label>
+        <input type="file" name="file" accept=".csv" required>
+        <button type="submit">Upload</button>
     </form>
-
-    {% if error %}
-    <p style="color:red">{{ error }}</p>
-    {% endif %}
 </body>
 </html>
