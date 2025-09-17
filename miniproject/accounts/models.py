@@ -1,24 +1,48 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-class Timetable(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="timetables")
-    slot = models.AutoField(primary_key=True)
-    time = models.TimeField()
-    monday = models.CharField(max_length=20, blank=True, null=True)
-    tuesday = models.CharField(max_length=20, blank=True, null=True)
-    wednesday = models.CharField(max_length=20, blank=True, null=True)
-    thursday = models.CharField(max_length=20, blank=True, null=True)
-    friday = models.CharField(max_length=20, blank=True, null=True)
+# class Timetable(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="timetables")
+#     slot = models.AutoField(primary_key=True)
+#     time = models.TimeField()
+#     monday = models.CharField(max_length=20, blank=True, null=True)
+#     tuesday = models.CharField(max_length=20, blank=True, null=True)
+#     wednesday = models.CharField(max_length=20, blank=True, null=True)
+#     thursday = models.CharField(max_length=20, blank=True, null=True)
+#     friday = models.CharField(max_length=20, blank=True, null=True)
 
-    class Meta:
-        db_table = "timetable"
+#     class Meta:
+#         db_table = "timetable"
 
 class AcademicCalendar(models.Model):
-    acdid = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="AcademicCalendars")
     date = models.DateField()
     context = models.CharField(max_length=50)
 
     class Meta:
         db_table = "AcademicCalendar"
+
+
+class Subject(models.Model):
+    subjectName = models.CharField(max_length=30, unique=True, null=False)
+    facultyName = models.CharField(max_length=30)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subjects")
+
+    def __str__(self):
+        return self.subjectName
+    
+    class Meta:
+        db_table = "Subject"
+
+class TimeTable(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="timetables")
+    subject = models.ForeignKey(Subject, on_delete=models.CASCADE, related_name="timetables")
+    day = models.CharField(max_length=10,null=False)
+    startTime = models.TimeField(null=False)
+    endTime = models.TimeField(null=False)
+
+    def __str__(self):
+        return f"{self.subject.subjectName} on {self.day} at {self.startTime}" 
+    
+    class Meta:
+        db_table = "TimeTable"
