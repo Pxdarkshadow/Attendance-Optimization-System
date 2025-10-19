@@ -1,5 +1,5 @@
 import pprint
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from . import forms
 from django.core.mail import EmailMessage
 from . tokens import generate_token
@@ -196,11 +196,17 @@ def userinput(request):
             for index in range(1, total_subjects + 1):
                 subject_name = request.POST.get(f"subject{index}")
                 faculty_name = request.POST.get(f"subject{index}Faculty")
+                total_hours = int(request.POST.get(f"total_hours{index}"))
+                hours_attended = int(request.POST.get(f"hours_attended{index}"))
+                attendance = round((hours_attended/total_hours)*100,2)
 
                 if subject_name and faculty_name:
                     Subject.objects.create(
                         subjectName=subject_name,
                         facultyName=faculty_name,
+                        total_hours=total_hours,
+                        hours_attended=hours_attended,
+                        attendance=attendance,
                         user=request.user
                     )
 
@@ -268,6 +274,101 @@ def upload_academiccalendar(request):
                 context=row['context'])
 
         messages.success(request,"Successfully entered the Academic Calendar in the database!")
+        return redirect('db4') 
+        # semStart = AcademicCalendar.objects.filter(user=request.user,context__iexact = 'semStart').first()
+        # semEnd = AcademicCalendar.objects.filter(user=request.user,context__iexact = 'semEnd').first()
 
-        return render(request, "accounts/db3.html") 
+        # current = semStart.date
+        # enddate = semEnd.date
+        # count = 0
+
+        # while current<=enddate:
+        #     while current <= enddate:
+        #         # if current == datetime(2025,10,5):
+        #         #     current = current + timedelta(days=1)
+        #         #     continue
+        #         print(current)
+        #         current = current + timedelta(days=1)
+        #         count = count + 1
+
+        # if semStart is not None or semEnd is not None:
+        #     return render(request, "accounts/db4.html",{'semStart': semStart, 'semEnd': semEnd, 'count':count}) 
     return render(request, "accounts/db3.html")
+
+
+@login_required # Calculate total lectures from start to end of semester
+def calculations(request):
+    semStart = AcademicCalendar.objects.filter(user=request.user,context__iexact = 'semStart').first()
+    semEnd = AcademicCalendar.objects.filter(user=request.user,context__iexact = 'semEnd').first()
+
+    print("semStart:", semStart)
+    print("semEnd:", semEnd)
+
+    current = semStart.date
+    enddate = semEnd.date
+    count = 0
+
+    while current<=enddate:
+        while current <= enddate:
+            if current == datetime(2025,10,5):
+                current = current + timedelta(days=1)
+                continue
+            print(current)
+            current = current + timedelta(days=1)
+            count = count + 1
+
+
+    user = request.user
+    sub = Subject.objects.filter(user=user)
+# HArd way 
+    # subjects = []
+    
+    
+
+    # for i in sub:
+    #     subjects.append(i)
+
+# Easy way
+    subjects = list(Subject.objects.filter(user=request.user))
+
+    total_hrs = 0 # total Hours of all subject
+    total_attended_hrs = 0 # total hours attended in all subjects
+    for s in sub:
+        total_hrs += s.total_hours
+        total_attended_hrs += s.hours_attended
+
+    total_attendance = round((total_attended_hrs/total_hrs)*100,2)
+
+    
+    remaining_hours = []
+
+    for s in subjects:
+        today = date.today()
+        current_id = s.id
+        subject_count = 0
+        while today<=enddate:
+            exists = AcademicCalendar.objects.filter(user=request.user, date=today).exists()
+            if exists == False:
+                if today.weekday()==0:
+                    subject_count += TimeTable.objects.filter(user=request.user, day__iexact='monday', subject_id=current_id).count()
+                elif today.weekday()==1:
+                    subject_count += TimeTable.objects.filter(user=request.user, day__iexact='tuesday', subject_id=current_id).count()
+                elif today.weekday()==2:
+                    subject_count += TimeTable.objects.filter(user=request.user, day__iexact='wednesday', subject_id=current_id).count()
+                elif today.weekday()==3:
+                    subject_count += TimeTable.objects.filter(user=request.user, day__iexact='thursday', subject_id=current_id).count()
+                elif today.weekday()==4:
+                    subject_count += TimeTable.objects.filter(user=request.user, day__iexact='friday', subject_id=current_id).count()
+            today = today + timedelta(days=1)
+        remaining_hours.append(subject_count)
+    
+    return render(request, "accounts/db4.html",
+                  {'semStart': semStart,
+                    'semEnd': semEnd, 
+                    'count':count,
+                    'subjects':subjects,
+                    'total_attendance':total_attendance,
+                    'total_hrs':total_hrs,
+                    'total_attended_hrs':total_attended_hrs,
+                    'remaining_hours':remaining_hours,
+                    })

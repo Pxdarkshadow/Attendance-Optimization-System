@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    Hello from db4
+    <p>Semester Starts on: {{semStart.date}}</p>
+    <p>Semester Ends on: {{semEnd.date}}</p>
+    <p>Total Days: {{count}}</p>
+
+    {% for obj in subjects %}
+        <div>Subject: {{obj.subjectName}} : {{obj.attendance}}%</div>
+    {% endfor %}
+
+    <div>
+        Total Hours: {{total_hrs}} hrs || Attended: {{total_attended_hrs}} hrs <br>
+        Total Attendance: {{total_attendance}} %
+    </div>
+
+    {% for index in remaining_hours %}
+        <div>{{index}}</div>
+    {% endfor %}
+    
+</body>
+</html>
