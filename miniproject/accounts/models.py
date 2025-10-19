@@ -24,7 +24,7 @@ class AcademicCalendar(models.Model):
 
 
 class Subject(models.Model):
-    subjectName = models.CharField(max_length=30, unique=True, null=False)
+    subjectName = models.CharField(max_length=30, null=False)
     facultyName = models.CharField(max_length=30)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subjects")
     total_hours = models.IntegerField(null=True)

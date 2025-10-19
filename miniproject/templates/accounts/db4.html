@@ -12,17 +12,34 @@
     <p>Total Days: {{count}}</p>
 
     {% for obj in subjects %}
-        <div>Subject: {{obj.subjectName}} : {{obj.attendance}}%</div>
+        {% if obj.attendance < 75 %}
+            <div style="color: red;">Subject: {{obj.subjectName}} : {{obj.attendance}}%</div>
+        {% else %}
+            <div style="color: black;">Subject: {{obj.subjectName}} : {{obj.attendance}}%</div>
+        {% endif %}
     {% endfor %}
 
     <div>
         Total Hours: {{total_hrs}} hrs || Attended: {{total_attended_hrs}} hrs <br>
-        Total Attendance: {{total_attendance}} %
+        {% if total_attendance < 75 %}
+            <span style="color: red;">Total Attendance: {{total_attendance}} %</span>
+        {% else %}
+            <span style="color: black;">Total Attendance: {{total_attendance}} %</span>
+        {% endif %}
     </div>
 
-    {% for index in remaining_hours %}
-        <div>{{index}}</div>
+    {% for index,subname in remaining_hours %}
+        <div>{{subname}}: {{index}} hrs of remaining lectures</div>
     {% endfor %}
     
+    {% for value,label,subname in status %}
+        {% if label == "never" %}
+            <span style="color: red;">{{subname}}: Not recoverable</span><br>
+        {% elif label == "must attend" %}
+            <span style="color: rgb(92, 163, 92);">{{subname}}:More {{value}} hrs to reach 75</span><br>
+        {% else %}
+            <span style="color: black;">{{subname}}:Can miss {{value}}</span><br>
+        {% endif %}
+    {% endfor %}
 </body>
 </html>
