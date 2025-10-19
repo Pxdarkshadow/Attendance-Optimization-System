@@ -27,6 +27,9 @@ class Subject(models.Model):
     subjectName = models.CharField(max_length=30, unique=True, null=False)
     facultyName = models.CharField(max_length=30)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="subjects")
+    total_hours = models.IntegerField(null=True)
+    hours_attended = models.IntegerField(null=True)
+    attendance = models.DecimalField(null=True,max_digits=5,decimal_places=2)
 
     def __str__(self):
         return self.subjectName
