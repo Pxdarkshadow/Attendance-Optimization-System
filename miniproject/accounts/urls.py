@@ -16,4 +16,5 @@ urlpatterns = [
     path('db2',views.upload_timetable,name="db2"),
     path('db3',views.upload_academiccalendar,name="db3"),
     path('db4',views.calculations,name="db4"),
+    path('markattendance',views.update_attendance,name="markattendance"),
 ]

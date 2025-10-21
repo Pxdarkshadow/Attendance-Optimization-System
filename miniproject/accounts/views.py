@@ -15,7 +15,7 @@ from django.template.loader import render_to_string
 from django.utils.http import urlsafe_base64_decode,urlsafe_base64_encode
 from django.utils.encoding import force_bytes,force_str
 from django.contrib.auth.decorators import login_required
-from .models import Subject, TimeTable, AcademicCalendar
+from .models import Subject, TimeTable, AcademicCalendar, ImportantDates
 import csv
 
 
@@ -296,6 +296,7 @@ def upload_academiccalendar(request):
     return render(request, "accounts/db3.html")
 
 
+
 @login_required # Calculate total lectures from start to end of semester
 def calculations(request):
     semStart = AcademicCalendar.objects.filter(user=request.user,context__iexact = 'semStart').first()
@@ -323,8 +324,6 @@ def calculations(request):
 # HArd way 
     # subjects = []
     
-    
-
     # for i in sub:
     #     subjects.append(i)
 
@@ -368,14 +367,33 @@ def calculations(request):
 
     for index,s in enumerate(subjects):
         if s.attendance < 75:
-            x = round((0.75 * (s.total_hours+temp[index]))-s.hours_attended,2)
+            # x = round(((0.75 * (s.total_hours+temp[index]))-s.hours_attended),2)
+            x = round(((0.75*s.total_hours-s.hours_attended)/0.25),2)
             if x<=temp[index]:
                 status.append((int(x),"must attend",s.subjectName))
             else:
                 status.append((-1,"never",s.subjectName))
         else:
-            x = round(((s.hours_attended+temp[index])-(0.75*(s.total_hours+temp[index]))),2)
+            # x = round(((s.hours_attended+temp[index])-(0.75*(s.total_hours+temp[index]))),2)
+            x = round(((s.hours_attended-0.75*s.total_hours)/0.75),2)
             status.append((int(x),"can miss",s.subjectName))
+
+
+
+    today = date.today()
+    if today.weekday()==0:
+        todaysubjects = list(TimeTable.objects.filter(user=request.user, day__iexact='monday'))
+    elif today.weekday()==1:
+        todaysubjects = list(TimeTable.objects.filter(user=request.user, day__iexact='tuesday'))
+    elif today.weekday()==2:
+        todaysubjects = list(TimeTable.objects.filter(user=request.user, day__iexact='wednesday'))
+    elif today.weekday()==3:
+        todaysubjects = list(TimeTable.objects.filter(user=request.user, day__iexact='thursday'))
+    elif today.weekday()==4:
+        todaysubjects = list(TimeTable.objects.filter(user=request.user, day__iexact='friday'))
+
+    session_key = f"attendance_updated_{today.isoformat()}"
+    flag = request.session.get(session_key, False)  # True if already updated today
                 
     
     return render(request, "accounts/db4.html",
@@ -388,4 +406,49 @@ def calculations(request):
                     'total_attended_hrs':total_attended_hrs,
                     'remaining_hours':remaining_hours,
                     'status':status,
+                    'todaysubjects':todaysubjects,
+                    'flag':flag,
                     })
+
+@login_required
+def update_attendance(request):
+    user = request.user
+    today = date.today()
+    today_key = f"attendance_updated_{today.isoformat()}"  # session key
+
+    if today.weekday()==0:
+        todaysubjects = list(TimeTable.objects.filter(user=user, day__iexact='monday'))
+    elif today.weekday()==1:
+        todaysubjects = list(TimeTable.objects.filter(user=user, day__iexact='tuesday'))
+    elif today.weekday()==2:
+        todaysubjects = list(TimeTable.objects.filter(user=user, day__iexact='wednesday'))
+    elif today.weekday()==3:
+        todaysubjects = list(TimeTable.objects.filter(user=user, day__iexact='thursday'))
+    elif today.weekday()==4:
+        todaysubjects = list(TimeTable.objects.filter(user=user, day__iexact='friday'))
+
+    if request.method == "POST":
+        if request.session.get(today_key):
+            messages.info(request, "Already updated today's attendance")
+            return redirect('db4')
+
+        for value in todaysubjects:
+            if str(value.subject) in request.POST:
+                # sub = TimeTable.objects.get(subject=value.subject,user=user,startTime=value.startTime,day=value.day)
+                temp = Subject.objects.get(subjectName=value.subject,user=user)
+                temp.total_hours += 1
+                temp.hours_attended += 1
+                temp.attendance = round((temp.hours_attended/temp.total_hours)*100,2)
+                temp.save()
+            else:
+                # sub = TimeTable.objects.get(subject=value.subject,user=user,startTime=value.startTime,day=value.day)
+                temp = Subject.objects.get(subjectName=value.subject,user=user)
+                temp.total_hours += 1
+                temp.attendance = round((temp.hours_attended/temp.total_hours)*100,2)
+                temp.save()
+            
+        request.session[today_key] = True
+        messages.success(request, "Successfully updated today's attendance")
+        return redirect('db4')
+
+    return render(request,"accounts/markattendance.html",{'todaysubjects':todaysubjects})
