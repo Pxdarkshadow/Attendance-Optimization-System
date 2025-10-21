@@ -3,43 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Attendance Dashboard</title>
+    <style>
+        body {
+            font-family: "Poppins", sans-serif;
+            background: #f4f6f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #0052cc;
+            color: white;
+            padding: 1rem 2rem;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1100px;
+            margin: 2rem auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 2rem;
+        }
+
+        h2 {
+            border-bottom: 2px solid #0052cc;
+            padding-bottom: 0.5rem;
+            color: #0052cc;
+        }
+
+        .summary {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #f9fafc;
+            flex: 1 1 30%;
+            border-radius: 10px;
+            padding: 1.2rem;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+        }
+
+        .card span {
+            display: block;
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 0.3rem;
+        }
+
+        .subjects, .status, .today {
+            margin-top: 2rem;
+        }
+
+        .subject-item, .status-item {
+            padding: 0.7rem 1rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .subject-item:last-child,
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .subject-item.red {
+            color: #d93025;
+            font-weight: 500;
+        }
+
+        .subject-item.black {
+            color: #222;
+        }
+
+        .status-item span {
+            font-weight: bold;
+        }
+
+        .red { color: #d93025; }
+        .green { color: #2e8b57; }
+        .black { color: #333; }
+
+        footer {
+            text-align: center;
+            margin-top: 2rem;
+            color: #777;
+            font-size: 0.9rem;
+        }
+    </style>
 </head>
 <body>
-    Hello from db4
-    <p>Semester Starts on: {{semStart.date}}</p>
-    <p>Semester Ends on: {{semEnd.date}}</p>
-    <p>Total Days: {{count}}</p>
-
-    {% for obj in subjects %}
-        {% if obj.attendance < 75 %}
-            <div style="color: red;">Subject: {{obj.subjectName}} : {{obj.attendance}}%</div>
-        {% else %}
-            <div style="color: black;">Subject: {{obj.subjectName}} : {{obj.attendance}}%</div>
-        {% endif %}
+    {% for message in messages %}
+        <div class="alert alert-{{message.tags}}" role="alert">
+            <div class="alert-content">
+                <i class="alert-icon fas fa-info-circle"></i>
+                <div class="alert-text">
+                    <strong>Message:</strong> {{message}}
+                </div>
+                <button type="button" class="alert-close" onclick="this.parentElement.parentElement.style.display='none'">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
     {% endfor %}
+    <header>
+        <h1>📊 Attendance Dashboard</h1>
+    </header>
 
-    <div>
-        Total Hours: {{total_hrs}} hrs || Attended: {{total_attended_hrs}} hrs <br>
-        {% if total_attendance < 75 %}
-            <span style="color: red;">Total Attendance: {{total_attendance}} %</span>
-        {% else %}
-            <span style="color: black;">Total Attendance: {{total_attendance}} %</span>
-        {% endif %}
+    <div class="container">
+        <div class="summary">
+            <div class="card">
+                <h3>Semester Start</h3>
+                <span>{{ semStart.date }}</span>
+            </div>
+            <div class="card">
+                <h3>Semester End</h3>
+                <span>{{ semEnd.date }}</span>
+            </div>
+            <div class="card">
+                <h3>Total Days</h3>
+                <span>{{ count }}</span>
+            </div>
+        </div>
+
+        <div class="subjects">
+            <h2>📚 Subject-wise Attendance</h2>
+            {% for obj in subjects %}
+                <div class="subject-item {% if obj.attendance < 75 %}red{% else %}black{% endif %}">
+                    {{ obj.subjectName }} — {{ obj.attendance }}%
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="summary">
+            <div class="card">
+                <h3>Total Hours</h3>
+                <span>{{ total_hrs }} hrs</span>
+            </div>
+            <div class="card">
+                <h3>Attended</h3>
+                <span>{{ total_attended_hrs }} hrs</span>
+            </div>
+            <div class="card">
+                <h3>Total Attendance</h3>
+                <span class="{% if total_attendance < 75 %}red{% else %}black{% endif %}">
+                    {{ total_attendance }} %
+                </span>
+            </div>
+        </div>
+
+        <div class="status">
+            <h2>📈 Attendance Status</h2>
+            {% for value,label,subname in status %}
+                <div class="status-item">
+                    {% if label == "never" %}
+                        <span class="red">{{ subname }}:</span> Not recoverable
+                    {% elif label == "must attend" %}
+                        <span class="green">{{ subname }}:</span> Need {{ value }} more hrs to reach 75%
+                    {% else %}
+                        <span class="black">{{ subname }}:</span> Can miss {{ value }} hrs
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="today">
+            <h2>📅 Today's Subjects</h2>
+            {% for index in todaysubjects %}
+                <div class="subject-item">{{ index }}</div>
+            {% endfor %}
+        </div>
     </div>
 
-    {% for index,subname in remaining_hours %}
-        <div>{{subname}}: {{index}} hrs of remaining lectures</div>
-    {% endfor %}
-    
-    {% for value,label,subname in status %}
-        {% if label == "never" %}
-            <span style="color: red;">{{subname}}: Not recoverable</span><br>
-        {% elif label == "must attend" %}
-            <span style="color: rgb(92, 163, 92);">{{subname}}:More {{value}} hrs to reach 75</span><br>
+    <form action="/markattendance" method="GET">
+        {% csrf_token %}
+        {% if not flag %}
+            <button type="submit">Update Today's Attendance</button>
         {% else %}
-            <span style="color: black;">{{subname}}:Can miss {{value}}</span><br>
+            <p>Today's Attendance is already updated!</p>
         {% endif %}
-    {% endfor %}
+    </form>
+
+    <footer>
+        © {{ current_year }} Attendance Tracker — All Rights Reserved
+    </footer>
 </body>
 </html>
